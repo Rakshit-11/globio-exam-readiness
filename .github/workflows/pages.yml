@@ -3,7 +3,7 @@ name: Deploy static app to GitHub Pages
 on:
   push:
     branches:
-      - rakshit-11-goethe-a1-readiness
+      - main
   workflow_dispatch:
 
 permissions:
