@@ -9,11 +9,24 @@ A short, original Goethe A1 practice check for learners who want a clearer next 
 
 Learners answer 12 original multiple-choice questions: four vocabulary, four grammar and four reading questions based on a short message. Results show the number correct, a breakdown by skill and up to three practice steps connected to missed topics. The check runs entirely in the browser and does not collect or transmit answers.
 
-### How the score works
+### Experimental scoring model
 
-Each question is worth one point. The overall practice score is correct answers divided by 12; each skill score is correct answers out of four. The interpretation is deliberately provisional: 75% or higher, with at least 50% in every skill, is described as “Promising signals on the topics checked”; 55–74% is “A good base to keep building”; below 55% is “More practice will help.” Missed concepts are ranked in question order and the first three distinct practice topics are recommended. When there is only one missed topic, the app adds a practice idea from the learner's lowest-scoring skill. A perfect score prompts practice in listening, writing and speaking areas this check does not assess rather than inventing a weakness.
+The learner can optionally mark an answer “I'm guessing / unsure.” An invisible per-question timer records active time until the selected option is chosen, pauses when the tab is hidden, and accumulates across back-navigation if the learner changes their answer. There is no countdown. Points per answer are:
 
-These cutoffs are product hypotheses, not validated readiness thresholds. The score is not a probability of passing, an official Goethe assessment, or a recommendation to book. The Goethe A1 exam also includes listening, writing and speaking; this MVP checks none of those skills and its short vocabulary, grammar and reading sample cannot represent the complete exam.
+| Response | Points |
+| --- | ---: |
+| Correct, not marked unsure, under 40 seconds | +10 |
+| Correct but marked unsure, or 40 seconds or more | +5 |
+| Wrong, not marked unsure, under 15 seconds | −2 |
+| Every other wrong answer | 0 |
+
+Unless the learner marks “I'm guessing / unsure,” the model treats the answer as confident. The 40–45 second interval is deliberately included in the +5 “fragile” category; a correct response at exactly 40 seconds is +5. The only penalty is for a fast, confident wrong answer. It is shown as a possible distractor trap to revisit—not proof of a knowledge gap. Timing can reflect reading pace, device, comfort or access needs; it is an experimental cue, not an objective measure of ability. A slow correct answer earns fewer points, but there is no extra penalty for a slow or unsure wrong answer.
+
+Raw points are normalized against 120 maximum overall and 40 per skill; displayed percentages are clamped at 0. The promising-signal band requires at least 75% overall and at least 55% in each included skill. A high total cannot offset a skill below that floor. These are prototype thresholds, not Goethe pass criteria, a “safe to book” rule or a validated prediction. We reviewed Goethe's [official examination regulations (PDF)](https://www.goethe.de/pro/relaunch/prf/en/Pruefungsordnung.pdf) and linked the [Goethe A1 exam page](https://www.goethe.de/en/spr/kup/prf/prf/gzsd1.html); the accessible general regulations do not state the exam-specific numeric pass threshold, so this MVP intentionally makes no claim about an official passing percentage. Confirm current A1 requirements with Goethe-Institut materials or your exam centre.
+
+Each question has a diagnostic tag. The app ranks tags by missed answers first and the experimental points within each tag second, then recommends two or three concrete 20-minute drills. If a learner has fewer than two tags with misses, it adds the next-lowest included tag as a practice/maintenance prompt; a perfect strong signal points to listening and writing/speaking because those abilities are not assessed here.
+
+This 12-item check is unofficial and incomplete: it covers only vocabulary, grammar and reading, not listening, writing or speaking. It is not a probability of passing or booking advice and cannot guarantee exam success. The thresholds and calibration heuristics remain unvalidated hypotheses.
 
 ## Why Goethe A1
 
