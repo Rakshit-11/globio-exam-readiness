@@ -7,34 +7,31 @@ A short, original Goethe A1 practice check for learners who want a clearer next 
 
 ## What this MVP does
 
-Learners answer 12 original multiple-choice questions: four vocabulary, four grammar and four reading questions based on a short message. Results show the number correct, a breakdown by skill and up to three practice steps connected to missed topics. The check runs entirely in the browser and does not collect or transmit answers.
+Learners answer 12 original multiple-choice questions: four vocabulary, four grammar and four reading questions based on a short message. Results show equal-weight accuracy, a breakdown by practice area and up to three tag-based 20-minute drills. A visible stopwatch tracks active time on the current item; it pauses when the browser tab is hidden and accumulates if learners navigate back. There is no countdown. Learners can optionally mark answers “I'm guessing / unsure.” The final snapshot reports elapsed time and the number of unsure answers separately. Neither affects accuracy. Timing is local to this practice interaction and is not comparable to Goethe's exam section clocks.
 
-### Experimental scoring model
+The app runs entirely in the browser. It does not collect, store or transmit answers, confidence choices or timings.
 
-The learner can optionally mark an answer “I'm guessing / unsure.” An invisible per-question timer records active time until the selected option is chosen, pauses when the tab is hidden, and accumulates across back-navigation if the learner changes their answer. There is no countdown. Points per answer are:
+### Research and scoring options considered
 
-| Response | Points |
-| --- | ---: |
-| Correct, not marked unsure, under 40 seconds | +10 |
-| Correct but marked unsure, or 40 seconds or more | +5 |
-| Wrong, not marked unsure, under 15 seconds | −2 |
-| Every other wrong answer | 0 |
+We selected Goethe A1 for a focused MVP because one published exam blueprint gives us a bounded, interpretable reference for question writing and review. This is a scope decision, not a claim that Goethe is better than ÖSD. Goethe's primary [A1 exam administration rules (PDF)](https://www.goethe.de/pro/relaunch/prf/en/Durchfuehrungsbestimmungen_A1_Start_Deutsch_1.pdf) say the exam has listening, reading, writing and speaking sections. The written exam lasts 65 minutes (listening about 20, reading 25, writing 20); speaking lasts 15 minutes in groups of up to four, with no preparation time. Each section is worth up to 15 raw points. The section points are multiplied by 1.66 and summed/rounded to a 100-point result (written maximum 75, oral maximum 25). The exam is passed at 60/100 or higher only when all sections have been completed. These rules were checked in the version dated 1 September 2025.
 
-Unless the learner marks “I'm guessing / unsure,” the model treats the answer as confident. The 40–45 second interval is deliberately included in the +5 “fragile” category; a correct response at exactly 40 seconds is +5. The only penalty is for a fast, confident wrong answer. It is shown as a possible distractor trap to revisit—not proof of a knowledge gap. Timing can reflect reading pace, device, comfort or access needs; it is an experimental cue, not an objective measure of ability. A slow correct answer earns fewer points, but there is no extra penalty for a slow or unsure wrong answer.
+Goethe's [A1 test-description booklet (PDF)](https://www.goethe.de/pro/relaunch/prf/en/Pruefungsziele_Testbeschreibung_A1_SD1.pdf) describes the exam as action-oriented: it assesses whether learners can handle everyday communicative tasks, rather than primarily testing isolated grammar or vocabulary knowledge. This check is not a representative sample of that exam blueprint: it uses 12 original multiple-choice items in three practice categories and does not assess listening, writing or speaking.
 
-Raw points are normalized against 120 maximum overall and 40 per skill; displayed percentages are clamped at 0. The promising-signal band requires at least 75% overall and at least 55% in each included skill. A high total cannot offset a skill below that floor. These are prototype thresholds, not Goethe pass criteria, a “safe to book” rule or a validated prediction. We reviewed Goethe's [official examination regulations (PDF)](https://www.goethe.de/pro/relaunch/prf/en/Pruefungsordnung.pdf) and linked the [Goethe A1 exam page](https://www.goethe.de/en/spr/kup/prf/prf/gzsd1.html); the accessible general regulations do not state the exam-specific numeric pass threshold, so this MVP intentionally makes no claim about an official passing percentage. Confirm current A1 requirements with Goethe-Institut materials or your exam centre.
+| Approach | What it offers | Main trade-off |
+| --- | --- | --- |
+| **1. Equal-weight correct / total** | Simple, auditable feedback on the questions actually answered; useful for a small practice set. | A short, narrow sample is noisy and cannot establish exam readiness. |
+| **2. Confidence and latency heuristic** | Can expose how learners felt and how long items took. | Self-reported confidence is subjective; speed can reflect reading pace, access needs or device conditions. Without calibration against outcomes, point adjustments and cutoffs are arbitrary. |
+| **3. Exam-blueprint tasks, official rubrics and representative timing** | Better content and task-format alignment; could cover the four exam sections and their official weights. | Requires original representative tasks, productive-skill rubrics, and enough development and review; closer resemblance alone does not validate a prediction. |
+| **4. Teacher-reviewed productive skills** | Human rubric feedback on writing and speaking, the areas this app omits. | Requires trained reviewers, time and checks for scoring consistency; still only a partial readiness picture. |
+| **5. Cohort outcome validation / predictive model** | Could test whether results relate to later official outcomes and estimate useful evidence after sufficient data. | Needs a larger, consented learner cohort, reliable outcomes, held-out confirmation and fairness checks; small samples risk misleading or overfit predictions. |
 
-Each question has a diagnostic tag. The app ranks tags by missed answers first and the experimental points within each tag second, then recommends two or three concrete 20-minute drills. If a learner has fewer than two tags with misses, it adds the next-lowest included tag as a practice/maintenance prompt; a perfect strong signal points to listening and writing/speaking because those abilities are not assessed here.
+**Choice for this MVP:** use approach 1 as a practice-only measure: each of the 12 questions counts equally, with no pass threshold and no “ready” verdict. The stopwatch and uncertainty toggle remain separate descriptive signals. Missed answers and self-reported uncertainty rank the diagnostic tags for practice suggestions; neither is converted into readiness points. This is the most transparent useful choice for the evidence available now. It does not reproduce Goethe's section weights or rubrics and its percentage must not be compared with the official 60% pass threshold.
 
-This 12-item check is unofficial and incomplete: it covers only vocabulary, grammar and reading, not listening, writing or speaking. It is not a probability of passing or booking advice and cannot guarantee exam success. The thresholds and calibration heuristics remain unvalidated hypotheses.
-
-## Why Goethe A1
-
-We chose Goethe A1 to make one small, clearly bounded MVP around a single named exam. A focused reference keeps the questions, wording and learner feedback interpretable while we test whether this kind of check is useful. This is a scope decision—not a claim that Goethe is better than ÖSD. We would revisit the choice with learner demand and evidence before expanding or switching exam coverage.
+The result always says **Evidence incomplete**. It lists listening, writing and speaking as not assessed, and does not recommend whether to book. The Goethe score and pass rule apply only to the actual exam with all four sections completed under Goethe's official scoring. The practice snapshot is not an official Goethe assessment or a guarantee of passing.
 
 ## How to know whether the score is right
 
-First, ask A1 teachers and exam-preparation specialists to review every item for level, ambiguity, answer-key accuracy and coverage. Then pilot the check with learners who are already preparing for Goethe A1. Compare their skill-level results with blinded teacher ratings and, with explicit consent, later official section outcomes. Check whether higher practice scores reliably correspond to stronger outcomes, whether the proposed cutoffs separate learners who need more support from those who are likely prepared, and whether results are consistent across alternate question sets. Inspect errors and uncertainty by skill and learner background; revise questions or thresholds when they systematically mislead. Recruit a second cohort to confirm any revised cutoffs before using “ready” language. Five learners can reveal confusing questions and interview themes, but are far too few to validate a predictive score. Until this work is done, show a transparent practice snapshot only, never a pass guarantee or booking recommendation.
+First, ask Goethe A1 teachers and assessment specialists to review the 12 items for level, answer-key accuracy, ambiguity and alignment with the official action-oriented blueprint. Observe five learners taking the check and use their interviews to find confusing language, inaccessible interactions and practice suggestions that do not fit. In a larger opt-in pilot, compare item and skill patterns with blinded teacher judgements, and—with explicit informed consent—later official outcomes for all four sections. Check score stability using alternate original item sets, item difficulty, subgroup differences and whether the score adds useful information beyond teacher judgement. Do not infer a booking threshold from five interviews or from a small convenience sample. If a future full-blueprint measure proposes a cutoff, pre-register it and test it on a separate cohort before considering any readiness wording. Until evidence supports more, present only a transparent practice snapshot, never a pass guarantee or booking recommendation.
 
 ### Five learner interviews before version 2
 
@@ -46,8 +43,8 @@ First, ask A1 teachers and exam-preparation specialists to review every item for
 
 ## Run locally
 
-No build step or dependencies are required. Open `index.html` in a browser, or serve this folder with any static file server.
+No build step or dependencies are required. Open `index.html` in a browser, or serve this folder with any static file server. Run the focused checks with `node --test`.
 
 ## Deploy
 
-GitHub Pages is deployed from the `rakshit-11-goethe-a1-readiness` branch using the workflow in `.github/workflows/pages.yml`.
+GitHub Pages deploys on pushes to `main` using `.github/workflows/pages.yml`; the `github-pages` environment restricts deployment branches. Confirm the main-branch workflow succeeds before treating a change as live.

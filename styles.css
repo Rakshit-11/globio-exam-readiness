@@ -115,7 +115,11 @@ h1, h2, h3, p { margin-top: 0; }
 .reading-layout .quiz-main { grid-area: main; }
 .reading-layout .passage-panel { grid-area: passage; }
 .quiz-main { min-width: 0; }
-.quiz-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.quiz-meta { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 15px; }
+.quiz-session-meta { display: flex; align-items: center; justify-content: flex-end; gap: 17px; }
+.question-stopwatch { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; white-space: nowrap; }
+.question-stopwatch > span:first-child { color: var(--coral); font-size: 14px; }
+.question-stopwatch time { min-width: 42px; color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 700; }
 .text-button { padding: 5px 0; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 600; }
 .text-button span { margin-right: 6px; color: var(--coral); }
 .quiz-back-label { color: var(--muted); font-size: 11px; font-weight: 600; }
@@ -149,7 +153,8 @@ h1, h2, h3, p { margin-top: 0; }
 .confidence-toggle input:checked + .confidence-switch::after { transform: translateX(17px); }
 .confidence-toggle input:focus-visible + .confidence-switch { outline: 3px solid var(--coral); outline-offset: 3px; }
 .confidence-copy strong { display: block; font-size: 11px; }
-.confidence-copy small { display: block; color: var(--muted); font-size: 9px; }
+.confidence-copy small { display: block; color: var(--muted); font-size: 10px; }
+.timer-explanation { margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
 .quiz-controls { display: flex; justify-content: space-between; align-items: center; }
 .button-quiet { border: 1px solid var(--line); background: transparent; color: var(--muted); }
 .button-quiet:hover:not(:disabled) { background: var(--white); }
@@ -173,7 +178,6 @@ h1, h2, h3, p { margin-top: 0; }
 
 .results-layout { padding: 47px 0 60px; }
 .results-heading { margin-bottom: 29px; }
-.results-heading .eyebrow { margin-bottom: 15px; }
 .results-heading h1 { font-size: clamp(45px, 6vw, 68px); }
 .results-heading h1 span { color: var(--green); }
 .results-lede { margin: 11px 0 0; color: var(--muted); font-size: 13px; }
@@ -202,10 +206,13 @@ h1, h2, h3, p { margin-top: 0; }
 .skill-track span.reading { background: #85874e; }
 .skill-points { margin: 6px 0 0; color: var(--muted); font-size: 9px; }
 .skills-footnote { margin: 16px 0 0; padding-top: 11px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
-.calibration-notes { margin-top: 16px; padding: 14px 16px; background: #ebe9dc; }
-.calibration-notes p { margin: 0; color: #52635c; font-size: 10px; line-height: 1.65; }
-.calibration-notes p + p { margin-top: 7px; color: var(--muted); }
-.calibration-notes strong { color: var(--ink); }
+.practice-signals { margin-top: 16px; padding: 14px 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.practice-signals h2 { margin: 0 0 9px; font-size: 11px; font-weight: 700; }
+.practice-signal-values { display: flex; flex-wrap: wrap; gap: 20px 38px; }
+.practice-signal-values > div { display: grid; gap: 2px; }
+.practice-signal-values span { color: var(--muted); font-size: 9px; }
+.practice-signal-values time, .practice-signal-values strong { color: var(--ink); font-size: 15px; font-variant-numeric: tabular-nums; font-weight: 700; }
+.practice-signals > p { margin: 8px 0 0; color: var(--muted); font-size: 9px; line-height: 1.6; }
 .score-method { margin-top: 12px; padding: 12px 15px; border: 1px solid var(--line); color: #52635c; }
 .score-method summary { color: var(--green); cursor: pointer; font-size: 11px; font-weight: 700; }
 .score-method ul { margin: 12px 0 2px; padding-left: 19px; }
@@ -213,7 +220,6 @@ h1, h2, h3, p { margin-top: 0; }
 .score-method strong { color: var(--ink); }
 .practice-section { margin-top: 36px; }
 .practice-heading { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 13px; }
-.practice-heading .eyebrow { margin-bottom: 8px; font-size: 9px; }
 .practice-heading h2 { margin: 0; font-family: var(--serif); font-size: 27px; font-weight: 400; }
 .practice-star { margin-bottom: 5px; color: var(--coral); font-size: 21px; }
 .practice-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
@@ -257,6 +263,9 @@ h1, h2, h3, p { margin-top: 0; }
   .site-footer { min-height: 62px; font-size: 9px; }
   .quiz-layout { min-height: 0; padding: 27px 0 42px; display: flex; flex-direction: column; gap: 25px; }
   .quiz-main { width: 100%; }
+  .quiz-meta { align-items: flex-start; }
+  .quiz-session-meta { align-items: flex-end; flex-direction: column; gap: 5px; }
+  .question-stopwatch { font-size: 9px; }
   .question-area { margin: 37px 0 30px; }
   .question-area h1 { font-size: 30px; }
   .answer-option { min-height: 57px; }
