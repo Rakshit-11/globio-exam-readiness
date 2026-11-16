@@ -157,6 +157,7 @@ function renderQuestion() {
 function renderResults() {
   const score = scoreAnswers(questions, responses);
   const recommendations = recommendPractice(score);
+  const priorityTopics = recommendations.slice(0, 2).map(item => item.tag).join(" · ");
   const skillNames = ["Vocabulary", "Grammar", "Reading"];
 
   app.innerHTML = `
@@ -167,16 +168,17 @@ function renderResults() {
       </div>
       <div class="results-grid">
         <div class="score-panel">
-          <div class="score-top"><span>PRACTICE ACCURACY</span><span aria-hidden="true">✳</span></div>
+          <div class="score-top"><span>PRACTICE CHECK RESULT</span><span aria-hidden="true">✳</span></div>
           <div class="score-number">${score.percentage}<span>%</span></div>
           <p class="score-caption">${score.correct} of ${score.total} answers correct</p>
           <div class="score-divider"></div>
           <h2>${score.interpretation.title}</h2>
           <p>${score.interpretation.description}</p>
-          <p class="provisional-note"><span aria-hidden="true">i</span> This is not a readiness score, pass prediction, or booking recommendation.</p>
+          <p class="priority-summary"><strong>${score.meetsTarget ? "Next to explore" : "Start with"}</strong> ${priorityTopics}</p>
+          <p class="provisional-note"><span aria-hidden="true">i</span> This practice-check estimate is not a Goethe result, pass prediction, or booking advice. The thresholds are product hypotheses.</p>
         </div>
         <div class="skills-panel">
-          <h2>By skill</h2>
+          <h2>By practice area</h2>
           <p class="panel-intro">Correct answers out of four items in each area.</p>
           ${skillNames.map(skill => {
             const result = score.skillResults[skill];
@@ -197,26 +199,9 @@ function renderResults() {
           <p class="skills-footnote">Vocabulary and grammar are practice categories, not separate Goethe exam sections.</p>
         </div>
       </div>
-      <div class="practice-signals" aria-labelledby="signals-title">
-        <h2 id="signals-title">Other practice signals</h2>
-        <div class="practice-signal-values">
-          <div><span>Active time in this check</span><time datetime="PT${Math.floor(score.activeTimeMs / 1_000)}S">${formatElapsed(score.activeTimeMs)}</time></div>
-          <div><span>Answers marked unsure</span><strong>${score.unsureCount} of ${score.total}</strong></div>
-        </div>
-        <p>Time and self-reported uncertainty are shown separately. Neither changes your accuracy result; timing is not comparable to Goethe's exam clocks.</p>
-      </div>
-      <details class="score-method">
-        <summary>How to read this snapshot</summary>
-        <ul>
-          <li>Each question counts equally. Your percentage is the share of these 12 answers that were correct; each skill percentage uses four questions.</li>
-          <li>The stopwatch and “I'm guessing / unsure” choice are practice notes only; neither adds or subtracts points.</li>
-          <li>This check leaves out listening, writing and speaking, so its percentage cannot estimate a complete exam result.</li>
-          <li>Goethe's official 60% pass threshold applies to its actual 100-point exam result only when all exam sections are completed. This practice percentage is not comparable to it.</li>
-        </ul>
-      </details>
       <section class="practice-section" aria-labelledby="practice-title">
         <div class="practice-heading">
-          <div><h2 id="practice-title">${score.correct === score.total ? "Keep exploring." : "A few things to practise."}</h2></div>
+          <div><h2 id="practice-title">${score.meetsTarget ? "Build on your progress." : "Start with these topics."}</h2></div>
           <span class="practice-star" aria-hidden="true">✳</span>
         </div>
         <ol class="practice-list">
@@ -234,9 +219,28 @@ function renderResults() {
           `).join("")}
         </ol>
       </section>
+      <div class="practice-signals" aria-labelledby="signals-title">
+        <h2 id="signals-title">Other practice signals</h2>
+        <div class="practice-signal-values">
+          <div><span>Active time in this check</span><time datetime="PT${Math.floor(score.activeTimeMs / 1_000)}S">${formatElapsed(score.activeTimeMs)}</time></div>
+          <div><span>Answers marked unsure</span><strong>${score.unsureCount} of ${score.total}</strong></div>
+        </div>
+        <p>Time and self-reported uncertainty are shown separately. Neither changes your accuracy result; timing is not comparable to Goethe's exam clocks.</p>
+      </div>
+      <details class="score-method">
+        <summary>How this practice-check result works</summary>
+        <ul>
+          <li>Each question counts equally. Your percentage is the share of these 12 answers that were correct; each skill percentage uses four questions.</li>
+          <li>“You may be ready” means at least ${score.thresholds.overall}% overall and at least ${score.thresholds.skillFloor}% in each included practice area (2 of 4 correct). Otherwise, the result points to topics to practise.</li>
+          <li>The 75% overall target and 50% area floor are product hypotheses for this small check, not Goethe standards or validated readiness cutoffs.</li>
+          <li>The stopwatch and “I'm guessing / unsure” choice are practice notes only; neither adds or subtracts points.</li>
+          <li>This check leaves out listening, writing and speaking, so its percentage cannot estimate a complete exam result.</li>
+          <li>Goethe's official 60% pass threshold applies to its actual 100-point exam result only when all exam sections are completed. This practice percentage is not comparable to it.</li>
+        </ul>
+      </details>
       <div class="results-disclaimer">
         <span class="scope-icon" aria-hidden="true">i</span>
-        <p><strong>Evidence incomplete.</strong> The Goethe-Zertifikat A1 assesses listening, reading, writing and speaking. This check uses 12 original multiple-choice items across vocabulary, grammar and reading; listening, writing and speaking are not assessed. It is not an official Goethe assessment or a guarantee of passing. The official 60% threshold applies only to the full exam under Goethe's scoring rules.</p>
+        <p><strong>Scope note.</strong> The Goethe-Zertifikat A1 assesses listening, reading, writing and speaking. This check uses 12 original multiple-choice items across vocabulary, grammar and reading; listening, writing and speaking are not scored here. The official 60% pass rule applies only to the full exam when all sections are completed under Goethe's scoring rules.</p>
       </div>
       <div class="results-actions">
         <button class="button button-primary" type="button" data-action="restart">Try again <span aria-hidden="true">↻</span></button>

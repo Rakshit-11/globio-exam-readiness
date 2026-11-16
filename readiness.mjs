@@ -1,6 +1,8 @@
 import { diagnosticTags } from "./questions.mjs";
 
 const SKILLS = ["Vocabulary", "Grammar", "Reading"];
+const ON_TRACK_THRESHOLD = 75;
+const SKILL_FLOOR_THRESHOLD = 50;
 
 export function scoreAnswers(questions, responses) {
   const skillResults = Object.fromEntries(SKILLS.map(skill => [skill, {
@@ -49,6 +51,22 @@ export function scoreAnswers(questions, responses) {
   const percentage = questions.length
     ? Math.round((correct / questions.length) * 100)
     : 0;
+  const belowFloorAreas = Object.entries(skillResults)
+    .filter(([, result]) => result.percentage < SKILL_FLOOR_THRESHOLD)
+    .map(([skill, result]) => `${skill} (${result.correct}/${result.total})`);
+  const meetsTarget = percentage >= ON_TRACK_THRESHOLD && belowFloorAreas.length === 0;
+
+  const interpretation = meetsTarget
+    ? {
+      title: "You may be ready",
+      description: `You cleared this check's provisional target: at least ${ON_TRACK_THRESHOLD}% overall, with at least ${SKILL_FLOOR_THRESHOLD}% in each included practice area. That is an encouraging signal from this check, not a Goethe result or a guarantee.`
+    }
+    : {
+      title: "Not quite yet—focus on these topics",
+      description: belowFloorAreas.length
+        ? `${belowFloorAreas.join(" and ")} ${belowFloorAreas.length === 1 ? "is" : "are"} below this check's provisional ${SKILL_FLOOR_THRESHOLD}% area floor (2 of 4 correct). Start with the priority topics below.`
+        : `This check's provisional overall target is ${ON_TRACK_THRESHOLD}%. Start with the priority topics below to build your practice score.`
+    };
 
   return {
     correct,
@@ -56,12 +74,15 @@ export function scoreAnswers(questions, responses) {
     percentage,
     activeTimeMs,
     unsureCount,
+    meetsTarget,
+    belowFloorAreas,
+    thresholds: {
+      overall: ON_TRACK_THRESHOLD,
+      skillFloor: SKILL_FLOOR_THRESHOLD
+    },
     skillResults,
     questionResults,
-    interpretation: {
-      title: "Evidence incomplete",
-      description: `You answered ${correct} of ${questions.length} questions correctly in this short practice check. This describes these items only; it does not show whether you are ready for the exam.`
-    }
+    interpretation
   };
 }
 

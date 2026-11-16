@@ -41,8 +41,47 @@ test("accuracy gives each item equal weight and ignores time and uncertainty", (
   assert.equal(score.skillResults.Vocabulary.percentage, 75);
   assert.equal(score.skillResults.Grammar.percentage, 100);
   assert.equal(score.skillResults.Reading.percentage, 75);
-  assert.equal(score.interpretation.title, "Evidence incomplete");
-  assert.match(score.interpretation.description, /does not show whether you are ready/);
+  assert.equal(score.meetsTarget, true);
+  assert.equal(score.interpretation.title, "You may be ready");
+});
+
+test("the on-track rule includes exact boundaries and enforces a floor in every area", () => {
+  const atBoundaries = makeResponses({
+    0: { answer: (questions[0].answer + 1) % 4 },
+    1: { answer: (questions[1].answer + 1) % 4 },
+    4: { answer: (questions[4].answer + 1) % 4 }
+  });
+  const boundaryScore = scoreAnswers(questions, atBoundaries);
+
+  assert.equal(boundaryScore.percentage, 75);
+  assert.equal(boundaryScore.skillResults.Vocabulary.percentage, 50);
+  assert.equal(boundaryScore.meetsTarget, true);
+  assert.deepEqual(boundaryScore.belowFloorAreas, []);
+
+  const belowSkillFloor = makeResponses({
+    0: { answer: (questions[0].answer + 1) % 4 },
+    1: { answer: (questions[1].answer + 1) % 4 },
+    2: { answer: (questions[2].answer + 1) % 4 }
+  });
+  const floorScore = scoreAnswers(questions, belowSkillFloor);
+  assert.equal(floorScore.percentage, 75);
+  assert.equal(floorScore.skillResults.Vocabulary.percentage, 25);
+  assert.equal(floorScore.meetsTarget, false);
+  assert.deepEqual(floorScore.belowFloorAreas, ["Vocabulary (1/4)"]);
+  assert.match(floorScore.interpretation.description, /2 of 4 correct/);
+
+  const belowOverallTarget = makeResponses({
+    0: { answer: (questions[0].answer + 1) % 4 },
+    1: { answer: (questions[1].answer + 1) % 4 },
+    4: { answer: (questions[4].answer + 1) % 4 },
+    5: { answer: (questions[5].answer + 1) % 4 },
+    8: { answer: (questions[8].answer + 1) % 4 }
+  });
+  const overallScore = scoreAnswers(questions, belowOverallTarget);
+  assert.equal(overallScore.percentage, 58);
+  assert.deepEqual(overallScore.belowFloorAreas, []);
+  assert.equal(overallScore.meetsTarget, false);
+  assert.match(overallScore.interpretation.description, /75%/);
 });
 
 test("missed-topic recommendations rank tags by incorrect answers", () => {
