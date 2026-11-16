@@ -1,12 +1,40 @@
 import { questions, readingText } from "./questions.mjs";
-import { recommendPractice, scoreAnswers, SCORING_RULES } from "./readiness.mjs";
-import { createQuestionTimer } from "./question-timer.mjs";
+import { recommendPractice, scoreAnswers } from "./readiness.mjs";
+import { createQuestionTimer, formatElapsed } from "./question-timer.mjs";
 
 const app = document.querySelector("#app");
 let screen = "intro";
 let currentQuestion = 0;
-const responses = questions.map(() => ({ answer: null, unsure: false, latencyMs: null }));
+let timerInterval = null;
+const responses = questions.map(() => ({ answer: null, unsure: false, activeTimeMs: 0 }));
 const questionTimer = createQuestionTimer();
+
+function stopQuestionTimer() {
+  if (timerInterval !== null) {
+    window.clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  questionTimer.pause(currentQuestion);
+  responses[currentQuestion].activeTimeMs = questionTimer.elapsed(currentQuestion);
+}
+
+function updateQuestionTimer() {
+  const display = document.querySelector("#question-time");
+  if (!display) return;
+  const elapsed = questionTimer.elapsed(currentQuestion);
+  responses[currentQuestion].activeTimeMs = elapsed;
+  display.textContent = formatElapsed(elapsed);
+  display.setAttribute("datetime", `PT${Math.floor(elapsed / 1_000)}S`);
+}
+
+function startQuestionTimer() {
+  if (timerInterval !== null) window.clearInterval(timerInterval);
+  timerInterval = null;
+  if (document.visibilityState !== "visible") return;
+  questionTimer.start(currentQuestion);
+  updateQuestionTimer();
+  timerInterval = window.setInterval(updateQuestionTimer, 1_000);
+}
 
 function renderIntro() {
   app.innerHTML = `
@@ -17,11 +45,11 @@ function renderIntro() {
         <p class="intro-lede">A short check-in for your Goethe A1 journey. Find out what feels solid—and what to practise next.</p>
         <div class="intro-actions">
           <button class="button button-primary" type="button" data-action="start">Start my check <span aria-hidden="true">→</span></button>
-          <span class="time-note"><span aria-hidden="true">◷</span> 12 questions · no countdown</span>
+          <span class="time-note"><span aria-hidden="true">◷</span> 12 questions · visible timer · no countdown</span>
         </div>
         <div class="scope-note">
           <span class="scope-icon" aria-hidden="true">i</span>
-          <p>Unofficial and not a pass predictor. Listening, writing and speaking aren't included. We use your confidence and active time as experimental signals; there's no countdown, and timing is not a measure of reading speed.</p>
+          <p>Unofficial and not a pass predictor. Listening, writing and speaking aren't included. A visible stopwatch and optional uncertainty note are practice signals only; neither affects your score.</p>
         </div>
       </div>
       <aside class="journey-card" aria-label="Your practice plan">
@@ -75,7 +103,10 @@ function renderQuestion() {
       <div class="quiz-main">
         <div class="quiz-meta">
           <span class="quiz-back-label">Your Goethe A1 check</span>
-          <span class="question-count">Question <strong>${currentQuestion + 1}</strong> of ${questions.length}</span>
+          <div class="quiz-session-meta">
+            <span class="question-count">Question <strong>${currentQuestion + 1}</strong> of ${questions.length}</span>
+            <span class="question-stopwatch"><span aria-hidden="true">◷</span><span>Active time on this item</span><time id="question-time" role="timer" aria-label="Active time on this item" aria-live="off">00:00</time></span>
+          </div>
         </div>
         <div class="progress-track" role="progressbar" aria-label="Check progress" aria-valuenow="${currentQuestion + 1}" aria-valuemin="1" aria-valuemax="${questions.length}">
           <span style="--progress:${progress / 100}"></span>
@@ -97,8 +128,9 @@ function renderQuestion() {
           <label class="confidence-toggle">
             <input type="checkbox" name="unsure" ${response.unsure ? "checked" : ""}>
             <span class="confidence-switch" aria-hidden="true"></span>
-            <span class="confidence-copy"><strong>I'm guessing / unsure</strong><small>Mark this if you're not confident in your answer.</small></span>
+            <span class="confidence-copy"><strong>I'm guessing / unsure</strong><small>Optional note for yourself; it does not change your score.</small></span>
           </label>
+          <p class="timer-explanation">No countdown. The stopwatch pauses when this tab is hidden. Time is shown for practice only and does not affect your result.</p>
         </div>
         <div class="quiz-controls">
           <button class="button button-quiet" type="button" data-action="back" ${currentQuestion === 0 ? "disabled" : ""}>Back</button>
@@ -119,36 +151,35 @@ function renderQuestion() {
   `;
   const selectedAnswer = document.querySelector(".answer-list input:checked");
   (selectedAnswer || document.querySelector("#question-title"))?.focus({ preventScroll: true });
-  if (document.visibilityState === "visible") questionTimer.start(currentQuestion);
+  startQuestionTimer();
 }
 
 function renderResults() {
   const score = scoreAnswers(questions, responses);
   const recommendations = recommendPractice(score);
-  const hasStrongSignal = score.percentage >= score.thresholds.strongSignal &&
-    Object.values(score.skillResults).every(result => result.percentage >= score.thresholds.skillFloor);
+  const priorityTopics = recommendations.slice(0, 2).map(item => item.tag).join(" · ");
   const skillNames = ["Vocabulary", "Grammar", "Reading"];
 
   app.innerHTML = `
     <section class="results-layout" aria-labelledby="results-title">
       <div class="results-heading">
-        <p class="eyebrow"><span class="eyebrow-line"></span>Your practice snapshot</p>
         <h1 id="results-title">Every step <span>counts.</span></h1>
         <p class="results-lede">Here's what this little check can—and can't—tell you.</p>
       </div>
       <div class="results-grid">
         <div class="score-panel">
-          <div class="score-top"><span>EXPERIMENTAL SIGNAL</span><span aria-hidden="true">✳</span></div>
+          <div class="score-top"><span>PRACTICE CHECK RESULT</span><span aria-hidden="true">✳</span></div>
           <div class="score-number">${score.percentage}<span>%</span></div>
-          <p class="score-caption">${score.rawPoints} / 120 points · ${score.correct} of ${score.total} answers right</p>
+          <p class="score-caption">${score.correct} of ${score.total} answers correct</p>
           <div class="score-divider"></div>
           <h2>${score.interpretation.title}</h2>
           <p>${score.interpretation.description}</p>
-          <p class="provisional-note"><span aria-hidden="true">i</span> These prototype thresholds are not Goethe pass criteria. This is not a booking recommendation or a validated prediction.</p>
+          <p class="priority-summary"><strong>${score.meetsTarget ? "Next to explore" : "Start with"}</strong> ${priorityTopics}</p>
+          <p class="provisional-note"><span aria-hidden="true">i</span> This practice-check estimate is not a Goethe result, pass prediction, or booking advice. The thresholds are product hypotheses.</p>
         </div>
         <div class="skills-panel">
-          <h2>By skill</h2>
-          <p class="panel-intro">Experimental points normalized to 40 per skill.</p>
+          <h2>By practice area</h2>
+          <p class="panel-intro">Correct answers out of four items in each area.</p>
           ${skillNames.map(skill => {
             const result = score.skillResults[skill];
             const skillClass = skill.toLowerCase();
@@ -161,32 +192,16 @@ function renderResults() {
                 <div class="skill-track" role="img" aria-label="${skill}: ${result.correct} of ${result.total} correct">
                   <span class="${skillClass}" style="width:${result.percentage}%"></span>
                 </div>
-                <p class="skill-points">${result.rawPoints} / 40 points · ${result.correct} of ${result.total} correct</p>
+                <p class="skill-points">${result.correct} of ${result.total} correct</p>
               </div>
             `;
           }).join("")}
-          <p class="skills-footnote">These are practice scores, not official exam-section scores.</p>
+          <p class="skills-footnote">Vocabulary and grammar are practice categories, not separate Goethe exam sections.</p>
         </div>
       </div>
-      <div class="calibration-notes">
-        <p><strong>Why flag a fast, confident miss?</strong> A wrong answer not marked unsure and selected in under 15 seconds loses 2 experimental points so a possible distractor trap is easier to revisit. ${score.fastConfidentMisses ? `That happened on ${score.fastConfidentMisses} ${score.fastConfidentMisses === 1 ? "answer" : "answers"}.` : "No answers met that pattern."} It is a prompt to review—not proof of a knowledge gap.</p>
-        <p>There is no visible countdown. Active time pauses while this tab is hidden. Timing can reflect reading pace, device or access needs; it is not an objective measure of ability.</p>
-      </div>
-      <details class="score-method">
-        <summary>How this experimental score works</summary>
-        <ul>
-          <li><strong>+${SCORING_RULES.correctConfidentPoints}:</strong> correct, not marked unsure and answered in under ${SCORING_RULES.confidentCorrectUnderMs / 1_000} seconds.</li>
-          <li><strong>+${SCORING_RULES.correctFragilePoints}:</strong> correct but marked unsure, or answered in ${SCORING_RULES.confidentCorrectUnderMs / 1_000} seconds or more. The 40–45 second range is treated as fragile too.</li>
-          <li><strong>${SCORING_RULES.fastConfidentWrongPoints}:</strong> wrong, not marked unsure and answered in under ${SCORING_RULES.fastWrongUnderMs / 1_000} seconds.</li>
-          <li><strong>${SCORING_RULES.otherWrongPoints}:</strong> every other wrong answer.</li>
-          <li>Raw points are normalized against 120 overall and 40 per skill; displayed percentages cannot go below 0.</li>
-          <li>The promising-signal band is at least 75% overall and at least 55% in each included skill. These are experimental product thresholds, not Goethe pass marks.</li>
-          <li>If you leave the optional “I'm guessing / unsure” toggle off, the model treats the answer as confident.</li>
-        </ul>
-      </details>
       <section class="practice-section" aria-labelledby="practice-title">
         <div class="practice-heading">
-          <div><p class="eyebrow"><span class="eyebrow-line"></span>Your next steps</p><h2 id="practice-title">${hasStrongSignal ? "Keep your momentum." : "A few things to practise."}</h2></div>
+          <div><h2 id="practice-title">${score.meetsTarget ? "Build on your progress." : "Start with these topics."}</h2></div>
           <span class="practice-star" aria-hidden="true">✳</span>
         </div>
         <ol class="practice-list">
@@ -204,9 +219,28 @@ function renderResults() {
           `).join("")}
         </ol>
       </section>
+      <div class="practice-signals" aria-labelledby="signals-title">
+        <h2 id="signals-title">Other practice signals</h2>
+        <div class="practice-signal-values">
+          <div><span>Active time in this check</span><time datetime="PT${Math.floor(score.activeTimeMs / 1_000)}S">${formatElapsed(score.activeTimeMs)}</time></div>
+          <div><span>Answers marked unsure</span><strong>${score.unsureCount} of ${score.total}</strong></div>
+        </div>
+        <p>Time and self-reported uncertainty are shown separately. Neither changes your accuracy result; timing is not comparable to Goethe's exam clocks.</p>
+      </div>
+      <details class="score-method">
+        <summary>How this practice-check result works</summary>
+        <ul>
+          <li>Each question counts equally. Your percentage is the share of these 12 answers that were correct; each skill percentage uses four questions.</li>
+          <li>“You may be ready” means at least ${score.thresholds.overall}% overall and at least ${score.thresholds.skillFloor}% in each included practice area (2 of 4 correct). Otherwise, the result points to topics to practise.</li>
+          <li>The 75% overall target and 50% area floor are product hypotheses for this small check, not Goethe standards or validated readiness cutoffs.</li>
+          <li>The stopwatch and “I'm guessing / unsure” choice are practice notes only; neither adds or subtracts points.</li>
+          <li>This check leaves out listening, writing and speaking, so its percentage cannot estimate a complete exam result.</li>
+          <li>Goethe's official 60% pass threshold applies to its actual 100-point exam result only when all exam sections are completed. This practice percentage is not comparable to it.</li>
+        </ul>
+      </details>
       <div class="results-disclaimer">
         <span class="scope-icon" aria-hidden="true">i</span>
-        <p><strong>A helpful snapshot, not a booking decision.</strong> The Goethe-Zertifikat A1 also tests listening, writing and speaking. This short check covers only vocabulary, grammar and reading; it is not an official Goethe assessment or a guarantee of passing.</p>
+        <p><strong>Scope note.</strong> The Goethe-Zertifikat A1 assesses listening, reading, writing and speaking. This check uses 12 original multiple-choice items across vocabulary, grammar and reading; listening, writing and speaking are not scored here. The official 60% pass rule applies only to the full exam when all sections are completed under Goethe's scoring rules.</p>
       </div>
       <div class="results-actions">
         <button class="button button-primary" type="button" data-action="restart">Try again <span aria-hidden="true">↻</span></button>
@@ -227,10 +261,7 @@ app.addEventListener("change", event => {
   if (event.target.matches('input[name="answer"]')) {
     const answer = Number(event.target.value);
     const response = responses[currentQuestion];
-    if (response.answer !== answer) {
-      response.answer = answer;
-      response.latencyMs = questionTimer.elapsed(currentQuestion);
-    }
+    response.answer = answer;
     document.querySelectorAll(".answer-option").forEach(option => {
       const input = option.querySelector("input");
       option.classList.toggle("is-selected", input.checked);
@@ -243,8 +274,8 @@ app.addEventListener("change", event => {
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) questionTimer.pause(currentQuestion);
-  else if (screen === "quiz") questionTimer.start(currentQuestion);
+  if (document.hidden) stopQuestionTimer();
+  else if (screen === "quiz") startQuestionTimer();
 });
 
 document.addEventListener("click", event => {
@@ -255,18 +286,19 @@ document.addEventListener("click", event => {
     screen = "quiz";
     currentQuestion = 0;
   } else if (action === "back" && currentQuestion > 0) {
-    questionTimer.pause(currentQuestion);
+    stopQuestionTimer();
     currentQuestion -= 1;
   } else if (action === "next" && responses[currentQuestion].answer !== null) {
-    questionTimer.pause(currentQuestion);
+    stopQuestionTimer();
     if (currentQuestion === questions.length - 1) screen = "results";
     else currentQuestion += 1;
   } else if (action === "restart") {
+    stopQuestionTimer();
     questionTimer.reset();
     responses.forEach(response => {
       response.answer = null;
       response.unsure = false;
-      response.latencyMs = null;
+      response.activeTimeMs = 0;
     });
     currentQuestion = 0;
     screen = "quiz";

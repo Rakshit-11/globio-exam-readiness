@@ -2,18 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { diagnosticTags, questions } from "../questions.mjs";
 import { recommendPractice, scoreAnswers } from "../readiness.mjs";
-import { createQuestionTimer } from "../question-timer.mjs";
+import { createQuestionTimer, formatElapsed } from "../question-timer.mjs";
 
 function makeResponses(overrides = {}) {
   return questions.map((question, index) => ({
     answer: question.answer,
     unsure: false,
-    latencyMs: 1_000,
+    activeTimeMs: 1_000,
     ...overrides[index]
   }));
 }
 
-test("the check has 12 tagged questions split evenly across the three skills", () => {
+test("the check has 12 tagged questions split evenly across the three practice areas", () => {
   assert.equal(questions.length, 12);
   assert.deepEqual(
     Object.fromEntries(["Vocabulary", "Grammar", "Reading"].map(skill => [
@@ -25,74 +25,74 @@ test("the check has 12 tagged questions split evenly across the three skills", (
   assert.ok(questions.every(question => question.options.length === 4 && diagnosticTags[question.tag]));
 });
 
-test("confidence and latency map to the stated point values and 40–45 seconds is fragile", () => {
+test("accuracy gives each item equal weight and ignores time and uncertainty", () => {
   const responses = makeResponses({
-    0: { latencyMs: 39_999 },
-    1: { unsure: true },
-    2: { latencyMs: 40_000 },
-    3: { latencyMs: 45_000 },
-    4: { answer: (questions[4].answer + 1) % 4, latencyMs: 14_999 },
-    5: { answer: (questions[5].answer + 1) % 4, latencyMs: 15_000 },
-    6: { answer: (questions[6].answer + 1) % 4, unsure: true, latencyMs: 1_000 },
-    7: { answer: (questions[7].answer + 1) % 4, latencyMs: 45_000 }
+    0: { activeTimeMs: 900_000, unsure: true },
+    1: { answer: (questions[1].answer + 1) % 4, activeTimeMs: 500 },
+    8: { answer: (questions[8].answer + 1) % 4, activeTimeMs: 2_000, unsure: true }
   });
   const score = scoreAnswers(questions, responses);
 
-  assert.deepEqual(score.questionResults.slice(0, 8).map(result => result.points), [
-    10, 5, 5, 5, -2, 0, 0, 0
-  ]);
-  assert.equal(score.fastConfidentMisses, 1);
+  assert.equal(score.correct, 10);
+  assert.equal(score.total, 12);
+  assert.equal(score.percentage, 83);
+  assert.equal(score.activeTimeMs, 911_500);
+  assert.equal(score.unsureCount, 2);
+  assert.equal(score.skillResults.Vocabulary.percentage, 75);
+  assert.equal(score.skillResults.Grammar.percentage, 100);
+  assert.equal(score.skillResults.Reading.percentage, 75);
+  assert.equal(score.meetsTarget, true);
+  assert.equal(score.interpretation.title, "You may be ready");
 });
 
-test("raw points normalize to total and per-skill percentages", () => {
-  const responses = makeResponses();
-  for (const index of [0, 1, 4, 5, 8, 9]) responses[index].unsure = true;
-  const score = scoreAnswers(questions, responses);
+test("the on-track rule includes exact boundaries and enforces a floor in every area", () => {
+  const atBoundaries = makeResponses({
+    0: { answer: (questions[0].answer + 1) % 4 },
+    1: { answer: (questions[1].answer + 1) % 4 },
+    4: { answer: (questions[4].answer + 1) % 4 }
+  });
+  const boundaryScore = scoreAnswers(questions, atBoundaries);
 
-  assert.equal(score.rawPoints, 90);
-  assert.equal(score.percentage, 75);
-  assert.deepEqual(
-    Object.fromEntries(Object.entries(score.skillResults).map(([skill, result]) => [skill, [result.rawPoints, result.percentage]])),
-    { Vocabulary: [30, 75], Grammar: [30, 75], Reading: [30, 75] }
-  );
-  assert.equal(score.interpretation.title, "Promising signals in the areas checked");
+  assert.equal(boundaryScore.percentage, 75);
+  assert.equal(boundaryScore.skillResults.Vocabulary.percentage, 50);
+  assert.equal(boundaryScore.meetsTarget, true);
+  assert.deepEqual(boundaryScore.belowFloorAreas, []);
+
+  const belowSkillFloor = makeResponses({
+    0: { answer: (questions[0].answer + 1) % 4 },
+    1: { answer: (questions[1].answer + 1) % 4 },
+    2: { answer: (questions[2].answer + 1) % 4 }
+  });
+  const floorScore = scoreAnswers(questions, belowSkillFloor);
+  assert.equal(floorScore.percentage, 75);
+  assert.equal(floorScore.skillResults.Vocabulary.percentage, 25);
+  assert.equal(floorScore.meetsTarget, false);
+  assert.deepEqual(floorScore.belowFloorAreas, ["Vocabulary (1/4)"]);
+  assert.match(floorScore.interpretation.description, /2 of 4 correct/);
+
+  const belowOverallTarget = makeResponses({
+    0: { answer: (questions[0].answer + 1) % 4 },
+    1: { answer: (questions[1].answer + 1) % 4 },
+    4: { answer: (questions[4].answer + 1) % 4 },
+    5: { answer: (questions[5].answer + 1) % 4 },
+    8: { answer: (questions[8].answer + 1) % 4 }
+  });
+  const overallScore = scoreAnswers(questions, belowOverallTarget);
+  assert.equal(overallScore.percentage, 58);
+  assert.deepEqual(overallScore.belowFloorAreas, []);
+  assert.equal(overallScore.meetsTarget, false);
+  assert.match(overallScore.interpretation.description, /75%/);
 });
 
-test("a high overall score cannot compensate for a skill below 55 percent", () => {
-  const responses = makeResponses();
-  for (const index of [4, 5]) {
-    responses[index].answer = (questions[index].answer + 1) % 4;
-    responses[index].latencyMs = 15_000;
-  }
-  const score = scoreAnswers(questions, responses);
-
-  assert.ok(score.percentage >= 75);
-  assert.equal(score.skillResults.Grammar.percentage, 50);
-  assert.equal(score.interpretation.title, "A focused tune-up may help");
-  assert.match(score.interpretation.description, /Grammar/);
-});
-
-test("negative raw points clamp displayed overall and skill percentages at zero", () => {
-  const responses = questions.map(question => ({
-    answer: (question.answer + 1) % question.options.length,
+test("missed-topic recommendations rank tags by incorrect answers", () => {
+  const responses = questions.map((question, index) => ({
+    answer: [0, 4, 8, 11].includes(index)
+      ? (question.answer + 1) % question.options.length
+      : question.answer,
     unsure: false,
-    latencyMs: 1_000
+    activeTimeMs: 1_000
   }));
-  const score = scoreAnswers(questions, responses);
-
-  assert.equal(score.rawPoints, -24);
-  assert.equal(score.percentage, 0);
-  assert.ok(Object.values(score.skillResults).every(result => result.percentage === 0));
-});
-
-test("drills prioritize tags with the most missed responses and stay concrete", () => {
-  const responses = questions.map(question => ({
-    answer: (question.answer + 1) % question.options.length,
-    unsure: false,
-    latencyMs: 1_000
-  }));
-  const score = scoreAnswers(questions, responses);
-  const drills = recommendPractice(score);
+  const drills = recommendPractice(scoreAnswers(questions, responses));
 
   assert.equal(drills.length, 3);
   assert.equal(drills[0].tag, "Time & schedules");
@@ -100,26 +100,40 @@ test("drills prioritize tags with the most missed responses and stay concrete", 
   assert.ok(drills.every(drill => drill.steps.length === 3));
 });
 
-test("correct but fragile answers prompt tag-specific practice; strong perfect signals broaden to omitted skills", () => {
-  const fragileResponses = makeResponses({
-    0: { latencyMs: 40_000 },
-    1: { unsure: true }
+test("unsure correct answers cue drills without changing the accuracy score", () => {
+  const responses = makeResponses({
+    0: { unsure: true },
+    4: { unsure: true }
   });
-  const fragileScore = scoreAnswers(questions, fragileResponses);
-  const fragileDrills = recommendPractice(fragileScore);
-  assert.equal(fragileDrills[0].tag, questions[0].tag);
-  assert.equal(fragileDrills[0].misses, 0);
-  assert.match(fragileDrills[0].note, /Keep this tag/);
+  const score = scoreAnswers(questions, responses);
+  const drills = recommendPractice(score);
 
-  const perfectScore = scoreAnswers(questions, makeResponses());
-  const broadDrills = recommendPractice(perfectScore);
-  assert.deepEqual(broadDrills.map(drill => drill.tag), [
+  assert.equal(score.percentage, 100);
+  assert.equal(drills[0].tag, questions[0].tag);
+  assert.equal(drills[0].misses, 0);
+  assert.equal(drills[0].unsure, 1);
+  assert.match(drills[0].note, /marked unsure/);
+});
+
+test("perfect confident responses point learners toward unassessed skills", () => {
+  const drills = recommendPractice(scoreAnswers(questions, makeResponses()));
+  assert.deepEqual(drills.map(drill => drill.tag), [
     "Listening (not assessed)",
     "Writing & speaking (not assessed)"
   ]);
 });
 
-test("active question time pauses for hidden tabs and accumulates across back-navigation", () => {
+test("a blank response is not counted as correct", () => {
+  const responses = makeResponses({ 3: { answer: null } });
+  const score = scoreAnswers(questions, responses);
+
+  assert.equal(score.correct, 11);
+  assert.equal(score.percentage, 92);
+  assert.equal(score.questionResults[3].isAnswered, false);
+  assert.equal(score.questionResults[3].isCorrect, false);
+});
+
+test("active question time pauses while hidden and accumulates after back-navigation", () => {
   let now = 0;
   const timer = createQuestionTimer(() => now);
   timer.start(0);
@@ -137,4 +151,11 @@ test("active question time pauses for hidden tabs and accumulates across back-na
 
   timer.reset();
   assert.equal(timer.elapsed(0), 0);
+});
+
+test("active-time formatting is readable for minute and hour totals", () => {
+  assert.equal(formatElapsed(0), "00:00");
+  assert.equal(formatElapsed(65_000), "01:05");
+  assert.equal(formatElapsed(3_661_000), "1:01:01");
+  assert.equal(formatElapsed(-1), "00:00");
 });
