@@ -149,9 +149,9 @@ export const tasks = [
     format: "Course registration form",
     prompt: "Complete this short form for a Saturday German course. Use your own details; every field is optional.",
     fields: [
-      { id: "name", label: "Vorname / First name", placeholder: "Your first name" },
-      { id: "wohnort", label: "Wohnort / City", placeholder: "Your city" },
-      { id: "telefon", label: "Telefonnummer / Phone number", placeholder: "Optional" }
+      { id: "name", label: "Vorname", placeholder: "Your first name" },
+      { id: "wohnort", label: "Wohnort", placeholder: "Your city" },
+      { id: "telefon", label: "Telefonnummer", placeholder: "Optional" }
     ],
     review: ["The requested fields are filled in.", "The information is easy to read."]
   },

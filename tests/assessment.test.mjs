@@ -42,6 +42,20 @@ test("the 12 original tasks cover each official Goethe A1 section", () => {
   assert.ok(tasks.filter(task => task.kind === "choice").every(task => diagnosticTags[task.tag]));
 });
 
+test("the Saturday course form keeps the fields with German-only labels", () => {
+  const form = tasks.find(task => task.id === "write-form");
+
+  assert.equal(
+    form.prompt,
+    "Complete this short form for a Saturday German course. Use your own details; every field is optional."
+  );
+  assert.deepEqual(form.fields.map(field => field.label), [
+    "Vorname",
+    "Wohnort",
+    "Telefonnummer"
+  ]);
+});
+
 test("listening and reading are scored separately with no overall readiness score", () => {
   const score = scoreSections(tasks, makeResponses());
 
